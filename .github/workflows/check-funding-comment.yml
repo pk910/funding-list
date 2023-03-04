@@ -11,10 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check comment
-      run: |
-        echo "Issue Number: ${{ github.event.issue.number }}"
-        echo "Comment Id: ${{ github.event.comment.id }}"
-    - name: Check comment
       uses: actions/github-script@v6
       if: always()
       with:

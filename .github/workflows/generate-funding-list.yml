@@ -1,0 +1,62 @@
+
+name: Generate funding list
+
+on:
+  workflow_dispatch:
+
+
+jobs:
+  generate_list:
+    name: Generate funding list
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Prepare funding-tool
+      run: |
+        mkdir ./tmp
+        cd tmp
+        fundingtool_release=`curl --silent "https://api.github.com/repos/pk910/testnet-funding-tool/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | head -n 1`
+        wget https://github.com/pk910/testnet-funding-tool/releases/download/$fundingtool_release/funding-tool-amd64
+        chmod +x funding-tool-amd64
+
+    - name: Load list of addresses from issue
+      uses: actions/github-script@v6
+      if: always()
+      with:
+        script: |
+          const issueId = 1;
+          const ethAmount = "10ETH";
+          
+          // get all comments
+          let allComments = await github.paginate(github.rest.issues.listComments, {
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issueId
+          });
+
+          for(let i = 0; i < allComments.length; i++) {
+            let cmt = allComments[i];
+            let addrPattern = /(0x[0-9a-f]{40})/ig;
+            while((match = addrPattern.exec(cmt.body)) !== null) {
+              fs.appendFileSync("./tmp/fundings.txt", match[1] + ":" + ethAmount);
+            }
+          }
+          console.log("Processed " + allComments.length + " comments.");
+    - name: Run funding-tool
+      run: |
+        cd tmp
+        ./funding-tool-amd64 -f ./fundings.txt -m 20 --use-distributor --distributor-batch-size 20 --gaslimit 1000000 --maxfeepergas 200 --maxpriofee 5 -p ce8516adfe220899b8181a57ffd1ea8ddce7d2100bd7f3fc43daff5a0df68e75 -o ./txlist.txt --chainid 11166111
+
+        cp ./fundings.txt ../fundings.txt
+        cp ./txlist.txt ../txlist.txt
+
+        cd ..
+        rm -rf ./tmp
+    - uses: stefanzweifel/git-auto-commit-action@v4
+      with:
+        commit_message: Commit generated funding & transactio list
+        branch: master
+        push_options: '--force'
+        skip_checkout: true
+
+
