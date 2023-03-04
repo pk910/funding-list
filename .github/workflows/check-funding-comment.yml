@@ -37,12 +37,15 @@ jobs:
           // get ETH addresses
           let ethAddrs = [];
           let ethAddrDict = {};
-          let match, bodyText = comment.data.body;
-          while((match = /(0x[0-9a-f]{40})/ig.exec(bodyText))) {
-            ethAddrs.push(match[1]);
-            ethAddrDict[match[1].toLowerCase()] = match[1];
+          {
+            let match, bodyText = comment.data.body;
+            let addrPattern = /(0x[0-9a-f]{40})/ig;
+            while((match = addrPattern.exec(bodyText)) !== null) {
+              ethAddrs.push(match[1]);
+              ethAddrDict[match[1].toLowerCase()] = match[1];
+            }
+            console.log("ETH Addrs: ", ethAddrs);
           }
-          console.log("ETH Addrs: ", ethAddrs);
 
           isValid = (ethAddrs.length === 1);
 
@@ -65,7 +68,8 @@ jobs:
                 isValid = false;
                 break;
               }
-              while((match = /(0x[0-9a-f]{40})/ig.exec(cmt.body))) {
+              let addrPattern = /(0x[0-9a-f]{40})/ig;
+              while((match = addrPattern.exec(cmt.body)) !== null) {
                 if(ethAddrDict.hasOwnProperty(match[1].toLowerCase())) {
                   isValid = false;
                   break;
