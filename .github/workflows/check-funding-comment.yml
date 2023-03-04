@@ -13,5 +13,65 @@ jobs:
     - name: Check comment
       run: |
         echo "Issue Number: ${{ github.event.issue.number }}"
-        echo "Event Id: ${{ github.event.id }}"
         echo "Comment Id: ${{ github.event.comment.id }}"
+    - name: Check comment
+      uses: actions/github-script@v6
+      if: always()
+      with:
+        script: |
+          const issueId = ${{ github.event.issue.number }};
+          const commentId = ${{ github.event.comment.id }};
+
+          if(issueId !== 1)
+            return;
+
+          let comment = await github.rest.issues.getComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            comment_id: commentId,
+          });
+
+          let isValid;
+
+          // get ETH addresses
+          let ethAddrs = [];
+          let ethAddrDict = {};
+          let match, bodyText = comment.body;
+          while((match = /(0x[0-9a-f]{40})/ig.exec(bodyText))) {
+            ethAddrs.push(match[1]);
+            ethAddrDict[match[1].toLowerCase()] = match[1];
+          }
+          console.log("ETH Addrs: ", ethAddrs);
+
+          isValid = (ethAddrs.length === 1);
+
+          if(isValid) {
+            // check for previous comments
+            let allComments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueId
+            });
+            console.log("loaded " + allComments.length + " comments");
+
+            for(let i = 0; i < allComments.length; i++) {
+              let cmt = allComments[i];
+              if(cmt.id == commentId)
+                continue;
+              if(cmt.user.id === comment.user.id) {
+                // do not allow multiple comments
+                isValid = false;
+                break;
+              }
+              while((match = /(0x[0-9a-f]{40})/ig.exec(cmt.body))) {
+                if(ethAddrDict.hasOwnProperty(match[1].toLowerCase())) {
+                  isValid = false;
+                  break;
+                }
+              }
+              if(!isValid)
+                break;
+            }
+          }
+
+          console.log("comment valid? ", isValid);
