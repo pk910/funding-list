@@ -30,9 +30,6 @@ jobs:
             repo: context.repo.repo,
             comment_id: commentId,
           });
-          console.log("comment: ", comment);
-
-          let isValid;
 
           // get ETH addresses
           let ethAddrs = [];
@@ -44,10 +41,10 @@ jobs:
               ethAddrs.push(match[1]);
               ethAddrDict[match[1].toLowerCase()] = match[1];
             }
-            console.log("ETH Addrs: ", ethAddrs);
           }
 
-          isValid = (ethAddrs.length === 1);
+          console.log("ETH addresses in comment: ", ethAddrs);
+          let isValid = (ethAddrs.length === 1);
 
           if(isValid) {
             // check for previous comments
@@ -56,7 +53,6 @@ jobs:
               repo: context.repo.repo,
               issue_number: issueId
             });
-            console.log("all comments: ", allComments);
             console.log("loaded " + allComments.length + " comments");
 
             for(let i = 0; i < allComments.length; i++) {
@@ -66,12 +62,15 @@ jobs:
               if(cmt.user.id === comment.data.user.id) {
                 // do not allow multiple comments
                 isValid = false;
+                console.error("INVALID: User already created another comment (id: " + cmt.id + ")");
                 break;
               }
               let addrPattern = /(0x[0-9a-f]{40})/ig;
               while((match = addrPattern.exec(cmt.body)) !== null) {
                 if(ethAddrDict.hasOwnProperty(match[1].toLowerCase())) {
+                  // do not allow duplicate addresses
                   isValid = false;
+                  console.error("INVALID: Duplicate address '" + match[1] + "' (already aused by comment " + cmt.id + ")");
                   break;
                 }
               }
@@ -81,3 +80,12 @@ jobs:
           }
 
           console.log("comment valid? ", isValid);
+
+          if(!isValid) {
+            // delete invalid comment
+            await github.rest.issues.deleteComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId,
+            });
+          }
