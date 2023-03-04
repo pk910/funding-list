@@ -1,0 +1,17 @@
+
+name: Check funding comment
+
+on:
+  issue_comment:
+    types: [created, edited]
+
+jobs:
+  build_config:
+    name: Check funding comment
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check comment
+      run: |
+        echo "Issue Number: ${{ github.event.issue.number }}"
+        echo "Event Id: ${{ github.event.id }}"
+        echo "Comment Id: ${{ github.event.comment.id }}"
