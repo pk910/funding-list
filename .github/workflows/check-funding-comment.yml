@@ -37,7 +37,7 @@ jobs:
           // get ETH addresses
           let ethAddrs = [];
           let ethAddrDict = {};
-          let match, bodyText = comment.body;
+          let match, bodyText = comment.data.body;
           while((match = /(0x[0-9a-f]{40})/ig.exec(bodyText))) {
             ethAddrs.push(match[1]);
             ethAddrDict[match[1].toLowerCase()] = match[1];
@@ -53,13 +53,14 @@ jobs:
               repo: context.repo.repo,
               issue_number: issueId
             });
+            console.log("all comments: ", allComments);
             console.log("loaded " + allComments.length + " comments");
 
             for(let i = 0; i < allComments.length; i++) {
               let cmt = allComments[i];
               if(cmt.id == commentId)
                 continue;
-              if(cmt.user.id === comment.user.id) {
+              if(cmt.user.id === comment.data.user.id) {
                 // do not allow multiple comments
                 isValid = false;
                 break;
