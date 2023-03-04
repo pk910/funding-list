@@ -45,15 +45,20 @@ jobs:
 
           console.log("ETH addresses in comment: ", ethAddrs);
           let isValid = (ethAddrs.length === 1);
+          if(!isValid) {
+            if(ethAddrs.length == 0)
+              console.error("INVALID: No ETH address in comment body");
+            else
+              console.error("INVALID: Too many ETH addresses in comment body");
+          }
 
           if(isValid) {
-            // check for previous comments
+            // check other comments
             let allComments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issueId
             });
-            console.log("loaded " + allComments.length + " comments");
 
             for(let i = 0; i < allComments.length; i++) {
               let cmt = allComments[i];
@@ -82,6 +87,7 @@ jobs:
           console.log("comment valid? ", isValid);
 
           if(!isValid) {
+            console.log("deleting invalid comment!");
             // delete invalid comment
             await github.rest.issues.deleteComment({
               owner: context.repo.owner,
