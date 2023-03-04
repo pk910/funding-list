@@ -21,6 +21,7 @@ jobs:
 
     - name: Load list of addresses from issue
       uses: actions/github-script@v6
+      id: funding-list
       if: always()
       with:
         script: |
@@ -34,20 +35,29 @@ jobs:
             issue_number: issueId
           });
 
+          let fundingList = [];
           for(let i = 0; i < allComments.length; i++) {
             let cmt = allComments[i];
             let addrPattern = /(0x[0-9a-f]{40})/ig;
             while((match = addrPattern.exec(cmt.body)) !== null) {
-              fs.appendFileSync("./tmp/fundings.txt", match[1] + ":" + ethAmount);
+              fundingList.push(match[1] + ":" + ethAmount);
             }
           }
           console.log("Processed " + allComments.length + " comments.");
+
+          return fundingList.join("\n");
+        result-encoding: string
+    - name: Write fundings.txt
+      uses: DamianReeves/write-file-action@master
+      with:
+        path: fundings.txt
+        contents: ${{steps.funding-list.outputs.result}}
+        write-mode: overwrite
     - name: Run funding-tool
       run: |
         cd tmp
-        ./funding-tool-amd64 -f ./fundings.txt -m 20 --use-distributor --distributor-batch-size 20 --gaslimit 1000000 --maxfeepergas 200 --maxpriofee 5 -p ce8516adfe220899b8181a57ffd1ea8ddce7d2100bd7f3fc43daff5a0df68e75 -o ./txlist.txt --chainid 11166111
+        ./funding-tool-amd64 -f ../fundings.txt -m 20 --use-distributor --distributor-batch-size 20 --gaslimit 1000000 --maxfeepergas 200 --maxpriofee 5 -p ce8516adfe220899b8181a57ffd1ea8ddce7d2100bd7f3fc43daff5a0df68e75 -o ./txlist.txt --chainid 11166111
 
-        cp ./fundings.txt ../fundings.txt
         cp ./txlist.txt ../txlist.txt
 
         cd ..
